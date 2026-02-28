@@ -8,9 +8,13 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy app
 COPY app /app/app
+COPY scripts/entrypoint.sh /app/entrypoint.sh
+
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
 
 # Expose port
 EXPOSE 8000
 
 # Start app
-CMD [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+ENTRYPOINT [ "/app/entrypoint.sh" ]
