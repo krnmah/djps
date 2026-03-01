@@ -2,9 +2,11 @@ import time
 from datetime import datetime, timezone
 
 from app.queue.redis_client import get_redis
+from app.queue.producer import enqueue_job
 from app.db.session import SessionLocal
 from app.models.job import Job, JobStatus
 from app.services.job_executor import execute_job
+from app.services.retry_service import handle_job_failure
 
 QUEUE_NAME = "main_queue"
 
@@ -50,9 +52,7 @@ def process_jobs():
             print(f"Job {job_id} failed: {e}")
             # Only update DB if we actually got the job row
             if job is not None:
-                job.status = JobStatus.failed
-                job.retry_count += 1
-                db.commit()
+                handle_job_failure(db, job, enqueue_job)
         finally:
             db.close()
     

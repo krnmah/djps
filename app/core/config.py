@@ -3,16 +3,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """
-    Application settings loaded in this priority order:
-      1. Real environment variables (e.g. set by Docker Compose)
-      2. .env file (used for local development)
-      3. Default values defined below (last resort fallback)
-
-    This means:
-    - Local dev  → .env sets DATABASE_URL=...@localhost...
-    - Docker     → docker-compose environment: overrides with @postgres/@redis
-    """
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "DJPS"
@@ -28,6 +18,9 @@ class Settings(BaseSettings):
 
     # timeout for the simulated call
     simulated_timeout: float = 5.0
+
+    # max number of attempts before a job is permanently marked failed
+    max_job_retries: int = 3
 
 @lru_cache
 def get_settings() -> Settings:

@@ -92,4 +92,4 @@ def test_worker_marks_job_failed_on_error(client):
         db.close()
 
         assert job.status == JobStatus.failed
-        assert job.retry_count == 1
+        assert job.retry_count == 3   # exhausts all 3 attempts (max_job_retries=3)
