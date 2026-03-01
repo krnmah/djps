@@ -1,7 +1,16 @@
 #!/bin/bash
+set -e
 
-# invoking migration
-alembic upgrade head
+# Only run DB migrations in the api container.
+# The worker skips this to avoid a race condition where both
+# containers try to CREATE TABLE alembic_version at the same time.
+if [ "$RUN_MIGRATIONS" = "true" ]; then
+    echo "Running database migrations..."
+    alembic upgrade head
+    echo "Migrations complete."
+fi
 
-# invoking uvicorn
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Hand off to whatever command was passed:
+#   api    -> uvicorn app.main:app ...
+#   worker -> python scripts/start_worker.py
+exec "$@"

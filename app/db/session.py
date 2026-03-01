@@ -1,10 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-import os
+from app.core.config import get_settings
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://djps:djps@postgres:5432/djps")
+# Load DATABASE_URL from Settings so .env is always respected
+# (os.getenv alone does NOT read .env files automatically)
+_settings = get_settings()
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(_settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():

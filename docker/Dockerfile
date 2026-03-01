@@ -2,20 +2,22 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Intalling dependencies
+# Installing dependencies
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy app
+# Copy application source
 COPY app /app/app
-COPY scripts/entrypoint.sh /app/entrypoint.sh
-COPY alembic.ini alembic.ini
+
+# Copy scripts (worker entry point + entrypoint.sh)
+COPY scripts /app/scripts
+
+# Copy alembic config and migrations
+COPY alembic.ini /app/alembic.ini
 
 # Make entrypoint executable
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/scripts/entrypoint.sh
 
-# Expose port
 EXPOSE 8000
 
-# Start app
-ENTRYPOINT [ "/app/entrypoint.sh" ]
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]

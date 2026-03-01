@@ -3,14 +3,35 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://djps:djps@postgres:5432/djps
       REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+      RUN_MIGRATIONS: "true"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        # Wait until Postgres passes its healthcheck before starting
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: python -u scripts/start_worker.py
+    environment:
+      DATABASE_URL: postgresql+psycopg2://djps:djps@postgres:5432/djps
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   postgres:
     image: postgres:16
@@ -22,7 +43,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U djps -d djps"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:7
     ports:
