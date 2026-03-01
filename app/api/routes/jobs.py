@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
+import uuid
+
 from app.schemas.job import JobCreate, JobResponse
 from app.models.job import Job, JobStatus
 from app.db.session import get_db
-import uuid
+from app.queue.producer import enqueue_job
 
 router = APIRouter()
 
@@ -27,4 +29,5 @@ def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
     db.add(job)
     db.commit()
     db.refresh(job)
+    enqueue_job(str(job.id))
     return job
