@@ -14,12 +14,8 @@ def revision(c):
     c.run(f'alembic revision --autogenerate -m "{message}"')
 
 @task
-def docker_build_up(c):
-    c.run("docker compose -f .\\docker\\docker-compose.yml up --build -d")
-
-@task
 def docker_up(c):
-    c.run("docker compose -f .\\docker\\docker-compose.yml up -d")
+    c.run("docker compose -f .\\docker\\docker-compose.yml up --build -d")
 
 @task
 def docker_down(c):
