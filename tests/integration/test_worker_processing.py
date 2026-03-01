@@ -59,9 +59,9 @@ def test_worker_processes_job_to_completion(client):
         assert response.status_code == 201
         job_id = response.json()["id"]
 
-        t = threading.Thread(target=process_jobs, daemon=True)
+        t = threading.Thread(target=process_jobs, kwargs={"max_iterations": 2}, daemon=True)
         t.start()
-        time.sleep(6)  # Wait for BRPOP timeout cycle + processing
+        t.join(timeout=12)
 
         db = TestingSessionLocal()
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -75,6 +75,7 @@ def test_worker_marks_job_failed_on_error(client):
 
     with patch("app.services.job_executor.random.random", return_value=0.0), \
          patch("app.workers.worker.SessionLocal", TestingSessionLocal), \
+         patch("app.services.retry_service.time.sleep"), \
          patch("app.queue.redis_client.get_settings") as mock_settings:
 
         mock_settings.return_value.redis_url = TEST_REDIS_URL
@@ -83,9 +84,9 @@ def test_worker_marks_job_failed_on_error(client):
         assert response.status_code == 201
         job_id = response.json()["id"]
 
-        t = threading.Thread(target=process_jobs, daemon=True)
+        t = threading.Thread(target=process_jobs, kwargs={"max_iterations": 4}, daemon=True)
         t.start()
-        time.sleep(6)
+        t.join(timeout=12)
 
         db = TestingSessionLocal()
         job = db.query(Job).filter(Job.id == job_id).first()

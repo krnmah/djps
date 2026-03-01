@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     # max number of attempts before a job is permanently marked failed
     max_job_retries: int = 3
 
+    # exponential backoff: delay = backoff_base ** retry_count (seconds)
+    backoff_base: float = 2.0
+
+    # hard ceiling on backoff delay so jobs don't wait > 1 minute
+    max_backoff: float = 60.0
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

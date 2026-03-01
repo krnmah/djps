@@ -10,11 +10,24 @@ from app.services.retry_service import handle_job_failure
 
 QUEUE_NAME = "main_queue"
 
-def process_jobs():
+
+def process_jobs(max_iterations: int = None):
+    """
+    Main worker loop. Polls Redis for jobs and processes them.
+
+    Args:
+        max_iterations: Stop after this many BRPOP cycles (None = run forever).
+                        Use a finite value in tests to avoid daemon threads
+                        leaking between test functions.
+    """
     r = get_redis()
     print("Worker started. Waiting for jobs...")
 
+    iterations = 0
     while True:
+        if max_iterations is not None and iterations >= max_iterations:
+            break
+        iterations += 1
         # BRPOP blocks until a job is available
         # like timeout = 5s then loops
         result = r.brpop(QUEUE_NAME, timeout=5)

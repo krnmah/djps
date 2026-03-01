@@ -11,6 +11,13 @@ from app.queue.producer import enqueue_job
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+@router.get("/jobs/{job_id}", response_model=JobResponse)
+def get_job(job_id: uuid.UUID, db: Session = Depends(get_db)):
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
 @router.post(
     "/jobs",
     response_model=JobResponse,
@@ -37,10 +44,3 @@ def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Failed to create job: {e}")
         raise HTTPException(status_code=500, detail="Failed to create job")
-
-@router.get("/jobs/{job_id}", response_model=JobResponse)
-def get_job(job_id: uuid.UUID, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return job
