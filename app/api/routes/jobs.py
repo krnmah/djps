@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 import uuid
 import logging
 
@@ -25,12 +26,11 @@ def get_job(job_id: uuid.UUID, db: Session = Depends(get_db)):
 )
 def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
     try:
-        # check for idempotency
         if job_in.idempotency_key:
             existing = db.query(Job).filter_by(idempotency_key=job_in.idempotency_key).first()
             if existing:
                 return existing
-        
+
         job = Job(
             payload=job_in.payload,
             status=JobStatus.queued,
@@ -41,6 +41,16 @@ def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
         db.refresh(job)
         enqueue_job(str(job.id))
         return job
+
+    except IntegrityError:
+        # Race condition: two concurrent requests with the same idempotency_key
+        # both passed the idempotency check above
+        db.rollback()
+        existing = db.query(Job).filter_by(idempotency_key=job_in.idempotency_key).first()
+        if existing:
+            return existing
+        raise HTTPException(status_code=409, detail="Duplicate idempotency key")
+
     except Exception as e:
         logger.error(f"Failed to create job: {e}")
         raise HTTPException(status_code=500, detail="Failed to create job")
