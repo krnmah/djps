@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.services.backoff import calculate_backoff
 
 
-def handle_job_failure(db: Session, job: Job, enqueue_fn) -> None:
+def handle_job_failure(db: Session, job: Job, enqueue_fn, dlq_fn) -> None:
     settings = get_settings()
 
     job.retry_count += 1
@@ -29,6 +29,7 @@ def handle_job_failure(db: Session, job: Job, enqueue_fn) -> None:
     else:
         job.status = JobStatus.failed
         db.commit()
+        dlq_fn(str(job.id))
         print(
-            f"Job {job.id} permanently failed after {job.retry_count} attempt(s)."
+            f"Job {job.id} permanently failed after {job.retry_count} attempt(s). Sent to DLQ."
         )
