@@ -12,14 +12,6 @@ QUEUE_NAME = "main_queue"
 
 
 def process_jobs(max_iterations: int = None):
-    """
-    Main worker loop. Polls Redis for jobs and processes them.
-
-    Args:
-        max_iterations: Stop after this many BRPOP cycles (None = run forever).
-                        Use a finite value in tests to avoid daemon threads
-                        leaking between test functions.
-    """
     r = get_redis()
     print("Worker started. Waiting for jobs...")
 
