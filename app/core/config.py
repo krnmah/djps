@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # run the stuck-job scan once every this many worker loop cycles.
     # Avoids hitting the DB on every BRPOP iteration.
     stuck_check_interval: int = 10
+
+    # number of worker processes
+    num_workers: int = 2
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
