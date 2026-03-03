@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     # hard ceiling on backoff delay so jobs don't wait > 1 minute
     max_backoff: float = 60.0
 
+    # how long a worker heartbeat key lives in Redis before expiring.
+    worker_heartbeat_ttl: int = 30
+    
+    # a job stuck in 'processing' for longer than this many seconds is considered abandoned
+    # the worker that picked it up likely crashed mid-execution.
+    stuck_job_threshold: int = 60
+
+    # run the stuck-job scan once every this many worker loop cycles.
+    # Avoids hitting the DB on every BRPOP iteration.
+    stuck_check_interval: int = 10
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
