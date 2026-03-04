@@ -41,6 +41,10 @@ class Settings(BaseSettings):
 
     # number of worker processes
     num_workers: int = 2
+
+    # maximum POST /jobs requests allowed per minute per IP address
+    rate_limit_per_minute: int = 60
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

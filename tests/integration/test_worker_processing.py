@@ -2,6 +2,7 @@ import time
 import threading
 import pytest
 import os
+import redis as redis_lib
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -11,6 +12,7 @@ from app.main import app
 from app.api.deps import get_db
 from app.models.base import Base
 from app.models.job import Job, JobStatus
+from app.queue.producer import QUEUE_NAME
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql+psycopg2://testuser:testpass@localhost:5433/testdb")
 TEST_REDIS_URL = os.getenv("TEST_REDIS_URL", "redis://localhost:6380/0")
@@ -26,7 +28,6 @@ def override_get_db():
     finally:
         db.close()
 
-
 # Override DB dependency for the FastAPI client
 app.dependency_overrides[get_db] = override_get_db
 
@@ -37,6 +38,12 @@ def setup_db():
     yield
     Base.metadata.drop_all(bind=engine)
 
+@pytest.fixture(autouse=True)
+def flush_queue():
+    r = redis_lib.Redis.from_url(TEST_REDIS_URL, decode_responses=True)
+    r.delete(QUEUE_NAME)
+    yield
+    r.delete(QUEUE_NAME)
 
 @pytest.fixture
 def client():

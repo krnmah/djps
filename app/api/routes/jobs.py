@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, Request, status, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import uuid
@@ -8,6 +8,7 @@ from app.schemas.job import JobCreate, JobResponse
 from app.models.job import Job, JobStatus
 from app.api.deps import get_db
 from app.queue.producer import enqueue_job
+from app.core.limiter import limiter, rate_limit_str
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -24,7 +25,8 @@ def get_job(job_id: uuid.UUID, db: Session = Depends(get_db)):
     response_model=JobResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
+@limiter.limit(rate_limit_str)
+def create_job(request: Request, job_in: JobCreate, db: Session = Depends(get_db)):
     try:
         if job_in.idempotency_key:
             existing = db.query(Job).filter_by(idempotency_key=job_in.idempotency_key).first()
