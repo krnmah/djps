@@ -10,6 +10,7 @@ from app.services.retry_service import handle_job_failure
 from app.workers.heartbeat import update_heartbeat
 from app.workers.recovery import requeue_stuck_jobs
 from app.core.config import get_settings
+from app.metrics.metrics import JOBS_COMPLETED
 
 QUEUE_NAME = "main_queue"
 
@@ -70,6 +71,7 @@ def process_jobs(max_iterations: int = None):
             # Mark as completed
             job.status = JobStatus.completed
             db.commit()
+            JOBS_COMPLETED.inc()
             print(f"Job {job_id} completed.")
 
         except Exception as e:

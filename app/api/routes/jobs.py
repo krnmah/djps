@@ -9,6 +9,7 @@ from app.models.job import Job, JobStatus
 from app.api.deps import get_db
 from app.queue.producer import enqueue_job
 from app.core.limiter import limiter, rate_limit_str
+from app.metrics.metrics import JOBS_CREATED
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ def create_job(request: Request, job_in: JobCreate, db: Session = Depends(get_db
         db.commit()
         db.refresh(job)
         enqueue_job(str(job.id))
+        JOBS_CREATED.inc()
         return job
 
     except IntegrityError:
