@@ -13,7 +13,6 @@ services:
       RUN_MIGRATIONS: "true"
     depends_on:
       postgres:
-        # Wait until Postgres passes its healthcheck before starting
         condition: service_healthy
       redis:
         condition: service_started
@@ -23,6 +22,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     command: python -u scripts/start_worker.py
+    ports:
+      - "8001:8001"
     environment:
       DATABASE_URL: postgresql+psycopg2://djps:djps@postgres:5432/djps
       REDIS_URL: redis://redis:6379/0
@@ -54,5 +55,34 @@ services:
     ports:
       - "6379:6379"
 
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
+  grafana_data:
