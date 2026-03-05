@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -10,9 +11,11 @@ from app.services.retry_service import handle_job_failure
 from app.workers.heartbeat import update_heartbeat
 from app.workers.recovery import requeue_stuck_jobs
 from app.core.config import get_settings
+from app.core.context import job_id_var, worker_id_var
 from app.metrics.metrics import JOBS_COMPLETED
 
 QUEUE_NAME = "main_queue"
+logger = logging.getLogger(__name__)
 
 
 def process_jobs(max_iterations: int = None):
@@ -21,7 +24,8 @@ def process_jobs(max_iterations: int = None):
 
     # Unique ID for this worker process
     worker_id = str(uuid.uuid4())
-    print(f"Worker started. ID={worker_id}")
+    worker_id_var.set(worker_id)
+    logger.info("Worker started.", extra={"worker_id": worker_id})
 
     iterations = 0
     while True:
@@ -48,7 +52,8 @@ def process_jobs(max_iterations: int = None):
             continue
 
         _, job_id = result
-        print(f"Picked up job: {job_id}")
+        job_id_var.set(job_id)
+        logger.info("Picked up job.", extra={"job_id": job_id})
 
         db = SessionLocal()
         job = None
@@ -56,7 +61,7 @@ def process_jobs(max_iterations: int = None):
             job = db.query(Job).filter(Job.id == job_id).first()
 
             if not job:
-                print(f"Job {job_id} not found in DB. Skipping...")
+                logger.warning("Job not found in DB, skipping.", extra={"job_id": job_id})
                 db.close()
                 continue
 
@@ -72,11 +77,10 @@ def process_jobs(max_iterations: int = None):
             job.status = JobStatus.completed
             db.commit()
             JOBS_COMPLETED.inc()
-            print(f"Job {job_id} completed.")
+            logger.info("Job completed.", extra={"job_id": job_id})
 
         except Exception as e:
-            print(f"Job {job_id} failed: {e}")
-            # Only update DB if we actually got the job row
+            logger.error("Job failed.", extra={"job_id": job_id, "error": str(e)})
             if job is not None:
                 handle_job_failure(db, job, enqueue_job, push_to_dlq)
         finally:

@@ -5,9 +5,12 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.router import api_router
 from app.core.limiter import limiter
+from app.core.logging_config import setup_logging
 
 
 def create_app() -> FastAPI:
+    setup_logging()
+
     app = FastAPI(
         title="DJPS",
         version="0.1.0",

@@ -1,8 +1,11 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from app.models.job import Job, JobStatus
+
+logger = logging.getLogger(__name__)
 
 
 def requeue_stuck_jobs(db: Session, enqueue_fn, threshold_seconds: int) -> list[str]:
@@ -23,8 +26,10 @@ def requeue_stuck_jobs(db: Session, enqueue_fn, threshold_seconds: int) -> list[
     for job in stuck_jobs:
         job.status = JobStatus.queued
         requeued.append(str(job.id))
-        print(f"Stuck job detected and re-queued: {job.id} "
-              f"(last_attempt_at={job.last_attempt_at})")
+        logger.warning(
+            "Stuck job detected, re-queuing.",
+            extra={"job_id": str(job.id), "last_attempt_at": str(job.last_attempt_at)},
+        )
 
     if requeued:
         db.commit()

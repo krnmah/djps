@@ -1,3 +1,4 @@
+import logging
 import time
 from sqlalchemy.orm import Session
 
@@ -5,6 +6,8 @@ from app.models.job import Job, JobStatus
 from app.core.config import get_settings
 from app.services.backoff import calculate_backoff
 from app.metrics.metrics import JOBS_RETRIED, JOBS_FAILED
+
+logger = logging.getLogger(__name__)
 
 
 def handle_job_failure(db: Session, job: Job, enqueue_fn, dlq_fn) -> None:
@@ -22,9 +25,14 @@ def handle_job_failure(db: Session, job: Job, enqueue_fn, dlq_fn) -> None:
         job.status = JobStatus.queued
         db.commit()
         JOBS_RETRIED.inc()
-        print(
-            f"Job {job.id} re-queued in {delay}s "
-            f"(attempt {job.retry_count} of {settings.max_job_retries - 1} retries)"
+        logger.info(
+            "Job re-queued for retry.",
+            extra={
+                "job_id": str(job.id),
+                "retry_count": job.retry_count,
+                "max_retries": settings.max_job_retries - 1,
+                "backoff_seconds": delay,
+            },
         )
         time.sleep(delay)
         enqueue_fn(str(job.id))
@@ -33,6 +41,7 @@ def handle_job_failure(db: Session, job: Job, enqueue_fn, dlq_fn) -> None:
         db.commit()
         JOBS_FAILED.inc()
         dlq_fn(str(job.id))
-        print(
-            f"Job {job.id} permanently failed after {job.retry_count} attempt(s). Sent to DLQ."
+        logger.error(
+            "Job permanently failed, sent to DLQ.",
+            extra={"job_id": str(job.id), "retry_count": job.retry_count},
         )

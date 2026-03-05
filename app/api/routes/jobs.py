@@ -44,6 +44,7 @@ def create_job(request: Request, job_in: JobCreate, db: Session = Depends(get_db
         db.refresh(job)
         enqueue_job(str(job.id))
         JOBS_CREATED.inc()
+        logger.info("Job created.", extra={"job_id": str(job.id), "idempotency_key": job_in.idempotency_key})
         return job
 
     except IntegrityError:
