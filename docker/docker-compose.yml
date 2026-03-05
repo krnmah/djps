@@ -83,6 +83,24 @@ services:
     depends_on:
       - prometheus
 
+  # Load testing (profile: load)
+  # Usage:
+  #   docker compose --profile load run --rm k6 run /scripts/smoke.js
+  #   docker compose --profile load run --rm k6 run /scripts/load.js
+  #   docker compose --profile load run --rm k6 run /scripts/spike.js
+  k6:
+    image: grafana/k6:0.55.0
+    profiles:
+      - load
+    volumes:
+      - ../tests/load:/scripts:ro
+    environment:
+      API_BASE_URL: http://api:8000
+    depends_on:
+      - api
+    networks:
+      - default
+
 volumes:
   postgres_data:
   grafana_data:
