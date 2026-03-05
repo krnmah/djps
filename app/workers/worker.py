@@ -1,4 +1,6 @@
 import logging
+import signal
+import threading
 import uuid
 from datetime import datetime, timezone
 
@@ -16,9 +18,22 @@ from app.metrics.metrics import JOBS_COMPLETED
 
 QUEUE_NAME = "main_queue"
 logger = logging.getLogger(__name__)
+_shutdown = threading.Event()
+
+
+def request_shutdown(signum=None, frame=None):
+    logger.info(
+        "Shutdown signal received, finishing current job then exiting.",
+        extra={"signal": signum},
+    )
+    _shutdown.set()
 
 
 def process_jobs(max_iterations: int = None):
+    if threading.current_thread() is threading.main_thread():
+        signal.signal(signal.SIGTERM, request_shutdown)
+        signal.signal(signal.SIGINT, request_shutdown)
+
     r = get_redis()
     settings = get_settings()
 
@@ -29,6 +44,13 @@ def process_jobs(max_iterations: int = None):
 
     iterations = 0
     while True:
+        if _shutdown.is_set():
+            logger.info(
+                "Graceful shutdown: no more jobs will be picked up.",
+                extra={"worker_id": worker_id},
+            )
+            break
+
         if max_iterations is not None and iterations >= max_iterations:
             break
         iterations += 1

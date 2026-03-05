@@ -32,19 +32,24 @@ def test_manager_reads_num_workers_from_settings():
 
         assert MockProcess.call_count == 2
 
-# Test 3: stop() terminates every running process
+# Test 3: stop() terminates every running process and waits with grace period
 def test_stop_terminates_all_processes():
     with patch("app.workers.manager.multiprocessing.Process") as MockProcess:
-        mock_instances = [_make_mock_process(alive=True) for _ in range(2)]
+        mock_instances = []
+        for _ in range(2):
+            p = MagicMock()
+            p.is_alive.side_effect = [True, False]
+            mock_instances.append(p)
         MockProcess.side_effect = mock_instances
 
         manager = WorkerManager(num_workers=2, max_iterations=5)
         manager.start()
-        manager.stop()
+        manager.stop(grace_period=5.0)
 
         for instance in mock_instances:
             instance.terminate.assert_called_once()
-            instance.join.assert_called_once()
+            instance.join.assert_called_once_with(timeout=5.0)
+            instance.kill.assert_not_called()
 
         assert len(manager) == 0
 

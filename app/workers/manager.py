@@ -1,5 +1,8 @@
+import logging
 import multiprocessing
 import os
+
+logger = logging.getLogger(__name__)
 
 
 def _worker_target(database_url: str, redis_url: str, max_iterations, failure_rate: float):
@@ -39,12 +42,21 @@ class WorkerManager:
             p.start()
             self._processes.append(p)
 
-    def stop(self):
+    def stop(self, grace_period: float = 30.0):
         for p in self._processes:
             if p.is_alive():
                 p.terminate()
+
         for p in self._processes:
-            p.join(timeout=5)
+            p.join(timeout=grace_period)
+            if p.is_alive():
+                logger.warning(
+                    "Worker did not stop within grace period — force-killing.",
+                    extra={"worker": p.name, "grace_period": grace_period},
+                )
+                p.kill()
+                p.join(timeout=5)
+
         self._processes.clear()
 
     def join(self, timeout: float = None):
