@@ -51,7 +51,7 @@ def clean_jobs():
 
 @pytest.fixture
 def client():
-    with patch("app.api.routes.jobs.enqueue_job"):
+    with patch("app.services.job_service.enqueue_job"):
         return TestClient(app)
 
 

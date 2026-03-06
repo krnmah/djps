@@ -35,7 +35,7 @@ def test_jobs_created_increments():
 
     job_in = JobCreate(payload={"t": "m1"})
     before = _counter_value(JOBS_CREATED)
-    with patch("app.api.routes.jobs.enqueue_job"):
+    with patch("app.services.job_service.enqueue_job"):
         create_job(request=request, job_in=job_in, db=mock_db)
     after = _counter_value(JOBS_CREATED)
 

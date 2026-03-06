@@ -40,7 +40,7 @@ def client():
 
 @pytest.fixture(autouse=True)
 def mock_enqueue(monkeypatch):
-    with patch("app.api.routes.jobs.enqueue_job") as mock:
+    with patch("app.services.job_service.enqueue_job") as mock:
         yield mock
 
 

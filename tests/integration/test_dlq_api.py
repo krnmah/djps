@@ -47,7 +47,7 @@ def test_redis():
 
 # Test 1: Empty DLQ returns empty list
 def test_dlq_empty_returns_empty_list(client, test_redis):
-    with patch("app.api.routes.dlq.get_redis", return_value=test_redis):
+    with patch("app.services.dlq_service.get_redis", return_value=test_redis):
         response = client.get("/dlq")
 
     assert response.status_code == 200
@@ -65,7 +65,7 @@ def test_dlq_returns_failed_job(client, test_redis):
 
     test_redis.rpush(DLQ_NAME, job_id)
 
-    with patch("app.api.routes.dlq.get_redis", return_value=test_redis):
+    with patch("app.services.dlq_service.get_redis", return_value=test_redis):
         response = client.get("/dlq")
 
     assert response.status_code == 200
@@ -91,7 +91,7 @@ def test_dlq_returns_multiple_jobs_in_order(client, test_redis):
     test_redis.rpush(DLQ_NAME, id1)
     test_redis.rpush(DLQ_NAME, id2)
 
-    with patch("app.api.routes.dlq.get_redis", return_value=test_redis):
+    with patch("app.services.dlq_service.get_redis", return_value=test_redis):
         response = client.get("/dlq")
 
     assert response.status_code == 200
@@ -106,7 +106,7 @@ def test_dlq_skips_job_ids_not_in_db(client, test_redis):
     ghost_id = str(uuid.uuid4())
     test_redis.rpush(DLQ_NAME, ghost_id)
 
-    with patch("app.api.routes.dlq.get_redis", return_value=test_redis):
+    with patch("app.services.dlq_service.get_redis", return_value=test_redis):
         response = client.get("/dlq")
 
     assert response.status_code == 200
