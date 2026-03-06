@@ -1,11 +1,9 @@
 import uuid
-from datetime import datetime
 
 from sqlalchemy import (
-    Column, String, DateTime, Enum, Integer, JSON, func
+    Column, Index, String, DateTime, Enum, Integer, func
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.ext.declarative import declarative_base
 import enum
 
 from app.models.base import Base
@@ -27,6 +25,14 @@ class Job(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     last_attempt_at = Column(DateTime, nullable=True)
+
+    # indexes
+    __table_args__ = (
+        Index("idx_jobs_status", "status"),
+        Index("idx_jobs_created_at", "created_at"),
+        Index("idx_jobs_status_created_at", "status", "created_at"),
+        Index("idx_jobs_last_attempt_at", "last_attempt_at"),
+    )
 
     def __repr__(self):
         return f"<Job id={self.id} status={self.status}>"
