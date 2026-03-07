@@ -42,9 +42,36 @@ Client (HTTP)
 
 ---
 
-## 2. Core Components
+## 2. High-Level Flow
 
-### 2.1 API Server (FastAPI)
+```mermaid
+flowchart LR
+
+Client -->|POST /jobs| API[FastAPI API Server]
+
+API -->|Insert Job| DB[(PostgreSQL)]
+API -->|Push Job ID| Redis[(Redis Queue)]
+
+Redis --> Worker1[Worker Process]
+Redis --> Worker2[Worker Process]
+Redis --> Worker3[Worker Process]
+
+Worker1 -->|Update Status| DB
+Worker2 -->|Update Status| DB
+Worker3 -->|Update Status| DB
+
+Worker1 -->|Metrics| Prometheus
+Worker2 -->|Metrics| Prometheus
+Worker3 -->|Metrics| Prometheus
+
+Prometheus --> Grafana[Grafana Dashboard]
+```
+
+---
+
+## 3. Core Components
+
+### 3.1 API Server (FastAPI)
 
 The API layer is a **pure HTTP adapter**. Routes validate the request shape, call service-layer functions, and convert service exceptions to HTTP status codes. No database queries or queue operations live in the route handlers.
 
@@ -59,7 +86,7 @@ Responsibilities:
 
 ---
 
-### 2.2 Service Layer
+### 3.2 Service Layer
 
 All business logic lives in `app/services/`. Routes are forbidden from importing the `Job` model, query functions, or `enqueue_job` directly. This enforces a strict separation:
 
@@ -77,7 +104,7 @@ Route  →  Service  →  Repository (ORM / Redis)
 
 ---
 
-### 2.3 PostgreSQL (Persistent Storage)
+### 3.3 PostgreSQL (Persistent Storage)
 
 **Table: `jobs`**
 
@@ -105,7 +132,7 @@ PostgreSQL is the **source of truth**. If Redis loses its queue contents the rec
 
 ---
 
-### 2.4 Redis (Queue Layer)
+### 3.4 Redis (Queue Layer)
 
 | Key | Structure | Usage |
 |---|---|---|
@@ -119,7 +146,7 @@ Redis `BRPOP` gives blocking pop with a timeout — the worker blocks cheaply un
 
 ---
 
-### 2.5 Worker Pool
+### 3.5 Worker Pool
 
 Workers are spawned as separate **OS processes** via Python `multiprocessing`. Each process runs `process_jobs()` in a tight loop:
 
@@ -143,7 +170,7 @@ Workers are spawned as separate **OS processes** via Python `multiprocessing`. E
 
 ---
 
-### 2.6 Retry Strategy
+### 3.6 Retry Strategy
 
 ```
 retry_delay = min(backoff_base ** retry_count, max_backoff)
@@ -155,7 +182,7 @@ After `max_job_retries` (default 3) failed attempts the job status is set to `fa
 
 ---
 
-### 2.7 Idempotency
+### 3.7 Idempotency
 
 1. Client sends `idempotency_key` (optional string) with the job creation request.
 2. **Fast path:** before inserting, the service queries for an existing row with that key and returns it immediately if found.
@@ -164,7 +191,7 @@ After `max_job_retries` (default 3) failed attempts the job status is set to `fa
 
 ---
 
-### 2.8 Stuck-Job Recovery
+### 3.8 Stuck-Job Recovery
 
 Every `stuck_check_interval` (default: 10) worker loop cycles, the worker calls `requeue_stuck_jobs()`, which:
 
@@ -175,7 +202,7 @@ This handles the crash scenario: if a worker dies mid-job, the job will be reque
 
 ---
 
-### 2.9 Observability
+### 3.9 Observability
 
 | Counter | Incremented when |
 |---|---|
@@ -190,7 +217,28 @@ Every log entry is newline-delimited JSON (`python-json-logger`). `job_id` and `
 
 ---
 
-## 3. Architecture Decisions & Trade-offs
+## 4. System Guarantees
+
+The system provides the following guarantees:
+
+**At-least-once execution**
+Jobs may be retried after failure but will never be silently dropped.
+
+**Idempotent submission**
+Duplicate job submissions with the same `idempotency_key` return the same job record and do not create additional jobs.
+
+**Crash recovery**
+If a worker crashes while processing a job, the stuck-job scanner requeues it after the configured threshold.
+
+**Graceful shutdown**
+Workers finish in-progress jobs before exiting, preventing partial execution.
+
+**Durable state**
+Job metadata is persisted in PostgreSQL; Redis stores only queue pointers.
+
+---
+
+## 5. Architecture Decisions & Trade-offs
 
 ### Decision 1: Synchronous workers (multiprocessing) instead of asyncio tasks
 
@@ -238,7 +286,7 @@ Every log entry is newline-delimited JSON (`python-json-logger`). `job_id` and `
 
 ---
 
-## 4. Scaling Approach
+## 6. Scaling Approach
 
 ### Horizontal scaling — API server
 
@@ -263,3 +311,20 @@ Increase `NUM_WORKERS` (environment variable) to add more processes on a single 
 
 - Add a **queue depth gauge** (`LLEN main_queue`) to Prometheus so autoscalers can trigger on backlog size.
 - Emit per-job latency histograms (time from `created_at` to `completed_at`) for SLO tracking.
+
+---
+
+## 7. Failure Scenarios
+
+### Worker crash during job execution
+If a worker terminates mid-job, the job remains in `processing` state.  
+The stuck-job recovery scan detects jobs where `last_attempt_at` exceeds the threshold and requeues them.
+
+### Redis restart
+Redis only stores job IDs. If Redis loses its queue state, a recovery script can re-enqueue all jobs with status `queued` from PostgreSQL.
+
+### Database restart
+Workers fail to fetch jobs temporarily but retry on the next loop iteration once the database becomes available.
+
+### Duplicate client submission
+The database UNIQUE constraint on `idempotency_key` prevents duplicate job creation even under concurrent requests.

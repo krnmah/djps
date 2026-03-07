@@ -1,4 +1,28 @@
-venv
-__pycache__
-.pytest_cache
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Tests & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Environment
 .env
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

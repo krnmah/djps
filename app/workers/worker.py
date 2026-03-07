@@ -66,11 +66,9 @@ def process_jobs(max_iterations: int = None):
             finally:
                 db.close()
 
-        # BRPOP blocks until a job is available
-        # like timeout = 5s then loops
+        # Block up to 5 s waiting for a job; loop back if the queue is empty.
         result = r.brpop(QUEUE_NAME, timeout=5)
         if result is None:
-            # no jobs in 5s, loop again
             continue
 
         _, job_id = result

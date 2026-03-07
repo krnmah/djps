@@ -108,14 +108,12 @@ djps/
 │   ├── prometheus.yml
 │   └── grafana/
 ├── docs/
-│   ├── ARCHITECTURE.MD
-│   └── DEVELOPMENT_PLAN.MD
+│   └── ARCHITECTURE.MD
 ├── scripts/
 │   └── run_load_tests.ps1        # k6 smoke / load / spike runner
 ├── tests/
 │   ├── unit/                     # pure unit tests (mocked dependencies)
 │   ├── integration/              # real Postgres + Redis via test containers
-│   ├── e2e/
 │   └── load/                     # k6 scripts
 ├── alembic.ini
 ├── pytest.ini
