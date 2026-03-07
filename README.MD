@@ -31,11 +31,11 @@ A production-grade background job processing system built with **FastAPI**, **Po
 - **Dead Letter Queue** — jobs exceeding max retries are moved to the DLQ
 - **Stuck-job recovery** — periodic scan requeues jobs stuck in `processing` longer than the threshold
 - **Worker heartbeat** — each worker writes a TTL key to Redis so dead workers are detectable
-- **Prometheus metrics** — counters for jobs created, completed, failed, and retried
+- **Prometheus metrics** — counters for jobs created/completed/failed/retried; queue-depth and active-worker gauges; job-duration histogram
 - **Grafana dashboards** — pre-built dashboard visualises all job counters
 - **Structured JSON logging** — every log line is JSON with `job_id` / `worker_id` correlation
 - **Graceful shutdown** — in-progress jobs finish before the process exits
-- **99% test coverage** — 179 unit + integration tests
+- **99% test coverage** — 182 unit + integration tests
 
 ---
 

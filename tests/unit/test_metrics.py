@@ -88,7 +88,51 @@ def test_jobs_failed_increments_on_permanent_failure():
 
     assert after == before + 1
 
-# Test 4: JOBS_RETRIED does NOT increment on permanent failure
+# Test 4: QUEUE_DEPTH gauge reflects r.llen value set by worker
+def test_queue_depth_gauge_set():
+    from app.metrics.metrics import QUEUE_DEPTH
+
+    QUEUE_DEPTH.set(0)
+    assert QUEUE_DEPTH._value.get() == 0.0
+
+    QUEUE_DEPTH.set(7)
+    assert QUEUE_DEPTH._value.get() == 7.0
+
+    QUEUE_DEPTH.set(0)
+    assert QUEUE_DEPTH._value.get() == 0.0
+
+
+# Test 5: ACTIVE_WORKERS gauge increments on inc() and decrements on dec()
+def test_active_workers_gauge_inc_and_dec():
+    from app.metrics.metrics import ACTIVE_WORKERS
+
+    ACTIVE_WORKERS.set(0)
+    assert ACTIVE_WORKERS._value.get() == 0.0
+
+    ACTIVE_WORKERS.inc()
+    assert ACTIVE_WORKERS._value.get() == 1.0
+
+    ACTIVE_WORKERS.inc()
+    assert ACTIVE_WORKERS._value.get() == 2.0
+
+    ACTIVE_WORKERS.dec()
+    assert ACTIVE_WORKERS._value.get() == 1.0
+
+    ACTIVE_WORKERS.set(0)
+
+
+# Test 6: JOB_DURATION histogram records an observation
+def test_job_duration_histogram_observes():
+    from app.metrics.metrics import JOB_DURATION
+
+    before_count = JOB_DURATION._sum.get()
+    JOB_DURATION.observe(1.5)
+    after_count = JOB_DURATION._sum.get()
+
+    assert after_count == before_count + 1.5
+
+
+# Test 7: JOBS_RETRIED does NOT increment on permanent failure
 def test_jobs_retried_does_not_increment_on_permanent_failure():
     from app.metrics.metrics import JOBS_RETRIED
     from app.services.retry_service import handle_job_failure
