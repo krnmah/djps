@@ -142,3 +142,27 @@ def test_manager_stop_clears_process_list():
     manager.stop()
 
     assert manager._processes == []
+
+# Test — worker skips gracefully when job_id exists in Redis but not in the DB
+def test_worker_skips_job_not_found_in_db(monkeypatch):
+    import app.workers.worker as wm
+
+    _reset_shutdown(monkeypatch)
+
+    mock_redis = MagicMock()
+    mock_redis.brpop.return_value = ("main_queue", "ghost-id-999")
+
+    mock_session = MagicMock()
+    mock_session.query.return_value.filter.return_value.first.return_value = None
+
+    with (
+        patch("app.workers.worker.get_redis", return_value=mock_redis),
+        patch("app.workers.worker.update_heartbeat"),
+        patch("app.workers.worker.requeue_stuck_jobs"),
+        patch("app.workers.worker.execute_job") as mock_execute,
+        patch("app.workers.worker.SessionLocal", return_value=mock_session),
+    ):
+        wm.process_jobs(max_iterations=1)
+
+    mock_execute.assert_not_called()
+    mock_session.close.assert_called()

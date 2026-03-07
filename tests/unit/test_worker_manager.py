@@ -94,3 +94,26 @@ def test_worker_processes_receive_correct_args():
             assert "postgresql" in database_url
             assert "redis" in redis_url
             assert max_iter == 10
+
+# Test 7: join() delegates to each process with the given timeout
+def test_join_calls_join_on_each_process():
+    with patch("app.workers.manager.multiprocessing.Process") as MockProcess:
+        processes = [_make_mock_process() for _ in range(2)]
+        MockProcess.side_effect = processes
+
+        manager = WorkerManager(num_workers=2, max_iterations=5)
+        manager.start()
+        manager.join(timeout=3.0)
+
+        for p in processes:
+            p.join.assert_called_with(timeout=3.0)
+
+
+# Test 8: _worker_target sets env vars and invokes process_jobs
+def test_worker_target_calls_process_jobs():
+    from app.workers.manager import _worker_target
+
+    with patch("app.workers.worker.process_jobs") as mock_pj:
+        _worker_target("postgresql://test/db", "redis://localhost:6379", 7, 0.0)
+
+    mock_pj.assert_called_once_with(max_iterations=7)
