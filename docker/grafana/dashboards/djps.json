@@ -4,7 +4,7 @@
   "tags": ["djps"],
   "timezone": "browser",
   "schemaVersion": 38,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "time": { "from": "now-15m", "to": "now" },
   "panels": [
@@ -155,6 +155,62 @@
           "unit": "short",
           "color": { "fixedColor": "orange", "mode": "fixed" }
         }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Queue Depth",
+      "gridPos": { "x": 0, "y": 20, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "max(djps_queue_depth)",
+          "legendFormat": "queue depth",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Active Workers",
+      "gridPos": { "x": 8, "y": 20, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "max(djps_active_workers)",
+          "legendFormat": "active workers",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "fixedColor": "blue", "mode": "fixed" } }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Job Duration (p95)",
+      "gridPos": { "x": 16, "y": 20, "w": 8, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(djps_job_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(djps_job_duration_seconds_sum[5m])) / sum(rate(djps_job_duration_seconds_count[5m]))",
+          "legendFormat": "avg",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "color": { "mode": "palette-classic" } }
       }
     }
   ]

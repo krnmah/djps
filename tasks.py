@@ -19,7 +19,7 @@ def docker_up(c):
 
 @task
 def docker_down(c):
-    c.run("docker compose -f .\\docker\\docker-compose.yml down -v")
+    c.run("docker compose -f .\\docker\\docker-compose.yml down")
 
 @task
 def docker_test_up(c):
