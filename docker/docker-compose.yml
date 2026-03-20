@@ -28,6 +28,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://djps:djps@postgres:5432/djps
       REDIS_URL: redis://redis:6379/0
       PYTHONUNBUFFERED: "1"
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus_multiproc
     depends_on:
       postgres:
         condition: service_healthy

@@ -24,11 +24,13 @@ JOBS_RETRIED = Counter(
 QUEUE_DEPTH = Gauge(
     "djps_queue_depth",
     "Current number of jobs waiting in the main Redis queue",
+    multiprocess_mode="livemax",
 )
 
 ACTIVE_WORKERS = Gauge(
     "djps_active_workers",
     "Number of worker processes currently running",
+    multiprocess_mode="livesum",
 )
 
 JOB_DURATION = Histogram(
