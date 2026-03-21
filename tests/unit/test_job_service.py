@@ -143,13 +143,18 @@ def test_list_jobs_returns_job_list_response(mock_db):
     def _make_job(i):
         job = MagicMock(spec=Job)
         job.id = uuid_mod.uuid4()
+        job.job_type = "http_request"
         job.status = "queued"
         job.payload = {"n": i}
         job.retry_count = 0
         job.idempotency_key = f"key-{i}"
+        job.result_json = None
+        job.error_code = None
+        job.error_message = None
         job.created_at = datetime.now(timezone.utc)
         job.updated_at = datetime.now(timezone.utc)
         job.last_attempt_at = None
+        job.completed_at = None
         return job
 
     jobs = [_make_job(i) for i in range(3)]

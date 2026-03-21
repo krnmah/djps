@@ -23,9 +23,14 @@ def _make_job(
     job.payload = {"task": "test"}
     job.retry_count = retry_count
     job.idempotency_key = idempotency_key
+    job.job_type = "http_request"
+    job.result_json = None
+    job.error_code = None
+    job.error_message = None
     job.created_at = datetime(2026, 3, 5, 12, 0, 0, tzinfo=timezone.utc)
     job.updated_at = datetime(2026, 3, 5, 12, 0, 1, tzinfo=timezone.utc)
     job.last_attempt_at = None
+    job.completed_at = None
     return job
 
 

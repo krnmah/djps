@@ -47,7 +47,12 @@ def get_job(job_id: uuid.UUID, db: Session = Depends(get_db)):
 @limiter.limit(rate_limit_str)
 def create_job(request: Request, job_in: JobCreate, db: Session = Depends(get_db)):
     try:
-        return svc_create_job(db, payload=job_in.payload, idempotency_key=job_in.idempotency_key)
+        return svc_create_job(
+            db,
+            payload=job_in.payload,
+            job_type=job_in.type,
+            idempotency_key=job_in.idempotency_key,
+        )
     except DuplicateIdempotencyKeyError:
         raise HTTPException(status_code=409, detail="Duplicate idempotency key")
     except Exception as e:

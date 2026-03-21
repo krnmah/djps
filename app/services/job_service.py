@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.job import Job, JobStatus
+from app.models.job import Job, JobStatus, JobType
 from app.queue.producer import enqueue_job
 from app.metrics.metrics import JOBS_CREATED
 from app.schemas.job import JobListResponse
@@ -23,6 +23,7 @@ def create_job(
     db: Session,
     payload: dict,
     idempotency_key: Optional[str] = None,
+    job_type: str = JobType.http_request.value,
 ) -> Job:
     if idempotency_key:
         existing = db.query(Job).filter_by(idempotency_key=idempotency_key).first()
@@ -34,6 +35,7 @@ def create_job(
             return existing
 
     job = Job(
+        job_type=job_type,
         payload=payload,
         status=JobStatus.queued,
         idempotency_key=idempotency_key,

@@ -16,6 +16,7 @@ coverage.xml
 
 # Environment
 .env
+docs/THREE_WEEK_IMPLEMENTATION_PLAN.MD
 
 # Editors
 .vscode/
